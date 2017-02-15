@@ -28,12 +28,18 @@ func main() {
 
 	log.Print("Start generating sources for the pipeline")
 	genChan := lib.Generate(targets, in.DownloadDelayMs)
+
 	log.Print("Start parser channel to accept sources")
 	parseChan := lib.Parse(genChan, in.ParserCount)
+
 	log.Print("Start accumulator channel for parsed emails")
-	accumChan := lib.Accum(parseChan, in.AccumBatchSize)
+	accumChan, err := lib.Accum(parseChan, in.AccumBatchSize, in.OutputDir)
+	if err != nil {
+		log.Fatalf("Error creating accumulator channel: %s", err)
+	}
+
 	log.Print("Start posting channel to send emails to miru-leaks")
-	postChan := lib.Post(accumChan, in.MiruURL, in.PostErrorDelayMs)
+	postChan := lib.Post(accumChan, in.MiruURL, in.PostErrorDelayMs, in.PostCompress)
 
 	// pull from sink until exhausted
 	count := 0

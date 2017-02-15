@@ -15,3 +15,5 @@ go run main.go -target https://wikileaks.org/podesta-emails/get/[:10]
 go run main.go -target https://wikileaks.org/podesta-emails/get/[5:10]
 
 cat config.json | go run main.go
+
+cat dump/podesta-emails_101.eml | jq -r .Body | tr '\r\n' '\n'

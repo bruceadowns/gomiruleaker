@@ -1,9 +1,11 @@
 {
-  "target": "https://wikileaks.org/podesta-emails/get/[1:1]",
-  "miruUrl": "https://host:port/add",
+  "target": "https://wikileaks.org/podesta-emails/get/[10:10]",
+  "~miruUrl": "https://host:port/add",
+  "~outputDir": "./dump",
   "~downloadDelayMs": 500,
-  "~accumBatchSize": 10,
+  "~accumBatchSize": 100,
   "parserCount": 1,
   "~postErrorDelayMs": 1000,
+  "~postCompress": true,
   "debug": true
 }

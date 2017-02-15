@@ -2,33 +2,17 @@ package lib
 
 import (
 	"bytes"
-	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 )
 
 // DoGet ...
 func DoGet(u string) (*bytes.Buffer, error) {
 	log.Printf("DoGet: %s", u)
-
-	url, err := url.Parse(u)
-	if err != nil {
-		return nil, fmt.Errorf("Error parsing url: %s [%s]", u, err)
-	}
-
-	client := http.DefaultClient
-	if url.Scheme == "https" {
-		log.Printf("Using https")
-		client = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: false}}}
-	}
-
-	resp, err := client.Get(u)
+	resp, err := http.Get(u)
 	if err != nil {
 		return nil, fmt.Errorf("Error getting url: %s [%s]", u, err)
 	}

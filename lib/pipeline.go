@@ -1,9 +1,9 @@
 package lib
 
 import (
-	"bytes"
 	"fmt"
 	"log"
+	"os"
 	"sync"
 	"time"
 )
@@ -12,17 +12,21 @@ import (
 // * enumerates urls from Targets
 // * retrieves the http.Get
 // * send bytes it along to the parse channel
-func Generate(t *Targets, d int) chan *bytes.Buffer {
+func Generate(t *Targets, d int) chan *Email {
 	log.Printf("Generate sources: %s [%d]", t, d)
 
-	out := make(chan *bytes.Buffer)
+	out := make(chan *Email)
 
 	go func() {
 		defer close(out)
 
 		for idx := t.Start; idx <= t.End; idx++ {
 			if bb, err := DoGet(fmt.Sprintf("%s%d", t.Prefix, idx)); err == nil {
-				out <- bb
+				out <- &Email{
+					ID:   idx,
+					Type: t.Type,
+					Raw:  bb.Bytes(),
+				}
 			} else {
 				break
 			}
@@ -42,20 +46,20 @@ func Generate(t *Targets, d int) chan *bytes.Buffer {
 // * normalizes input to text
 // * parses email
 // * sends email to accumulator
-func Parse(in chan *bytes.Buffer, c int) chan *Email {
+func Parse(in chan *Email, c int) chan *Email {
 	log.Printf("Parser Count: %d", c)
 
 	out := make(chan *Email)
 	var wg sync.WaitGroup
 
 	for i := 0; i < c; i++ {
-		log.Printf("Start Parser %d", i)
+		log.Printf("Start Parser %d", i+1)
 		wg.Add(1)
 
 		go func() {
-			for bb := range in {
-				if m, err := ParseEmail(bb); err == nil {
-					out <- m
+			for e := range in {
+				if err := ParseEmail(e); err == nil {
+					out <- e
 				} else {
 					log.Print(err)
 				}
@@ -74,10 +78,16 @@ func Parse(in chan *bytes.Buffer, c int) chan *Email {
 }
 
 // Accum ...
-func Accum(in chan *Email, b int) chan Emails {
+func Accum(in chan *Email, b int, d string) (chan Emails, error) {
 	log.Printf("Accum channel in batches of %d", b)
 
 	out := make(chan Emails)
+
+	if len(d) > 0 {
+		if err := os.MkdirAll(d, os.ModePerm); err != nil {
+			return nil, err
+		}
+	}
 
 	go func() {
 		defer close(out)
@@ -86,25 +96,27 @@ func Accum(in chan *Email, b int) chan Emails {
 		for email := range in {
 			log.Printf("Accumulate email: %s", email)
 
+			email.Save(d)
 			emails = append(emails, email)
+
 			if len(emails) >= b {
-				log.Printf("Send %d emails to posters", len(emails))
+				log.Printf("Send %d emails to poster", len(emails))
 				out <- emails
 				emails = make(Emails, 0)
 			}
 		}
 
 		if len(emails) > 0 {
-			log.Printf("Send %d emails to posters", len(emails))
+			log.Printf("Send %d emails to poster", len(emails))
 			out <- emails
 		}
 	}()
 
-	return out
+	return out, nil
 }
 
 // Post ...
-func Post(in chan Emails, u string, d int) chan int {
+func Post(in chan Emails, u string, d int, c bool) chan int {
 	if u == "" {
 		u = "stdout"
 	}
@@ -121,7 +133,7 @@ func Post(in chan Emails, u string, d int) chan int {
 					log.Printf("Post to stdout: %d: %s", k, Trunc(v.String()))
 				}
 			} else {
-				if err := emails.Post(u, d); err != nil {
+				if err := emails.Post(u, d, c); err != nil {
 					log.Printf("Error posting: %s", err)
 				}
 			}

@@ -10,17 +10,22 @@ import (
 // Targets ...
 type Targets struct {
 	Prefix string
+	Type   string
 	Start  int
 	End    int
 }
 
 func (t *Targets) String() string {
-	return fmt.Sprintf("p: %s s: %d e: %d", t.Prefix, t.Start, t.End)
+	return fmt.Sprintf("p: %s t: %s s: %d e: %d",
+		t.Prefix, t.Type, t.Start, t.End)
 }
 
 // Equals ...
 func (t *Targets) Equals(that *Targets) bool {
 	if !strings.EqualFold(t.Prefix, that.Prefix) {
+		return false
+	}
+	if !strings.EqualFold(t.Type, that.Type) {
 		return false
 	}
 	if t.Start != that.Start {
@@ -35,11 +40,20 @@ func (t *Targets) Equals(that *Targets) bool {
 
 // ExpandTargetURL expand a url path that ends will sequence via slice syntax
 func ExpandTargetURL(u string) (*Targets, error) {
+
+	// TODO parsing in here grew sideways and needs to be refactored
+
 	seqStart := strings.Index(u, "[")
 	seqEnd := strings.LastIndex(u, "]")
 
 	if (seqStart == -1 && seqEnd != -1) || (seqStart != -1 && seqEnd == -1) {
 		return nil, fmt.Errorf("Mismatched brackets")
+	}
+
+	parts := strings.Split(u, "/")
+	tType := ""
+	if len(parts) > 3 {
+		tType = parts[len(parts)-3]
 	}
 
 	if seqStart == -1 && seqEnd == -1 {
@@ -53,14 +67,14 @@ func ExpandTargetURL(u string) (*Targets, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &Targets{prefix, iStart, iStart}, nil
+		return &Targets{prefix, tType, iStart, iStart}, nil
 	}
 
 	prefix := u[:seqStart]
 	seq := u[seqStart+1 : seqEnd]
 
 	if seq == ":" {
-		return &Targets{prefix, 1, math.MaxInt32}, nil
+		return &Targets{prefix, tType, 1, math.MaxInt32}, nil
 	}
 
 	colon := strings.Index(seq, ":")
@@ -70,7 +84,7 @@ func ExpandTargetURL(u string) (*Targets, error) {
 			return nil, err
 		}
 
-		return &Targets{prefix, iStart, iStart}, nil
+		return &Targets{prefix, tType, iStart, iStart}, nil
 	}
 
 	sStart := seq[:colon]
@@ -84,7 +98,7 @@ func ExpandTargetURL(u string) (*Targets, error) {
 			return nil, fmt.Errorf("Error expanding url (end is negative): %s", u)
 		}
 
-		return &Targets{prefix, 1, iEnd}, nil
+		return &Targets{prefix, tType, 1, iEnd}, nil
 	}
 
 	iStart, err := strconv.Atoi(sStart)
@@ -97,7 +111,7 @@ func ExpandTargetURL(u string) (*Targets, error) {
 
 	sEnd := seq[colon+1:]
 	if sEnd == "" {
-		return &Targets{prefix, iStart, math.MaxInt32}, nil
+		return &Targets{prefix, tType, iStart, math.MaxInt32}, nil
 	}
 
 	iEnd, err := strconv.Atoi(sEnd)
@@ -109,5 +123,5 @@ func ExpandTargetURL(u string) (*Targets, error) {
 		iStart, iEnd = iEnd, iStart
 	}
 
-	return &Targets{prefix, iStart, iEnd}, nil
+	return &Targets{prefix, tType, iStart, iEnd}, nil
 }

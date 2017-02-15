@@ -11,16 +11,18 @@ import (
 type Input struct {
 	Target           string
 	MiruURL          string
+	OutputDir        string
 	DownloadDelayMs  int
 	AccumBatchSize   int
 	ParserCount      int
 	PostErrorDelayMs int
+	PostCompress     bool
 	Debug            bool
 }
 
 func (i *Input) String() string {
-	return fmt.Sprintf("target: %s miru: %s delay: %d batch: %d count: %d debug: %t",
-		i.Target, i.MiruURL, i.DownloadDelayMs, i.AccumBatchSize, i.ParserCount, i.Debug)
+	return fmt.Sprintf("target: %s miru: %s dir: %s delay: %d batch: %d count: %d compress: %t debug: %t",
+		i.Target, i.MiruURL, i.OutputDir, i.DownloadDelayMs, i.AccumBatchSize, i.ParserCount, i.PostCompress, i.Debug)
 }
 
 // InitInput ...

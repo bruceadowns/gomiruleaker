@@ -33,13 +33,15 @@ func TestInputString(t *testing.T) {
 	in := &Input{
 		Target:          "foo",
 		MiruURL:         "bar",
+		OutputDir:       "bazz",
 		DownloadDelayMs: 1,
 		AccumBatchSize:  2,
 		ParserCount:     3,
+		PostCompress:    true,
 		Debug:           true,
 	}
 	out := fmt.Sprintf("%s", in)
-	if !strings.EqualFold("target: foo miru: bar delay: 1 batch: 2 count: 3 debug: true", out) {
+	if !strings.EqualFold("target: foo miru: bar dir: bazz delay: 1 batch: 2 count: 3 compress: true debug: true", out) {
 		t.Errorf("Unexpected input %s", out)
 	}
 }
@@ -51,7 +53,8 @@ func TestInitInputSuccess(t *testing.T) {
 	  "downloadDelayMs": 500,
 	  "accumBatchSize": 10,
 	  "parserCount": 2,
-	  "postErrorDelayMs": 1000,
+		"postErrorDelayMs": 1000,
+		"postCompress": true,
 	  "debug": true
 	}`
 
@@ -77,6 +80,9 @@ func TestInitInputSuccess(t *testing.T) {
 	}
 	if in.PostErrorDelayMs != 1000 {
 		t.Error("PostErrorDelayMs invalid")
+	}
+	if !in.PostCompress {
+		t.Error("PostCompress invalid")
 	}
 	if !in.Debug {
 		t.Error("Debug invalid")

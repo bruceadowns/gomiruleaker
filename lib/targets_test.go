@@ -12,31 +12,31 @@ func TestSuccessExpandTargetURL(t *testing.T) {
 	}{
 		{
 			in:       "https://foo.bar:123/bad-emails/get/12345",
-			expected: &Targets{"https://foo.bar:123/bad-emails/get/", 12345, 12345},
+			expected: &Targets{"https://foo.bar:123/bad-emails/get/", "bad-emails", 12345, 12345},
 		},
 		{
 			in:       "https://foo.bar:123/bad-emails/get/[12345]",
-			expected: &Targets{"https://foo.bar:123/bad-emails/get/", 12345, 12345},
+			expected: &Targets{"https://foo.bar:123/bad-emails/get/", "bad-emails", 12345, 12345},
 		},
 		{
 			in:       "https://foo.bar:123/bad-emails/get/[:]",
-			expected: &Targets{"https://foo.bar:123/bad-emails/get/", 1, math.MaxInt32},
+			expected: &Targets{"https://foo.bar:123/bad-emails/get/", "bad-emails", 1, math.MaxInt32},
 		},
 		{
 			in:       "https://foo.bar:123/bad-emails/get/[123:]",
-			expected: &Targets{"https://foo.bar:123/bad-emails/get/", 123, math.MaxInt32},
+			expected: &Targets{"https://foo.bar:123/bad-emails/get/", "bad-emails", 123, math.MaxInt32},
 		},
 		{
 			in:       "https://foo.bar:123/bad-emails/get/[:456]",
-			expected: &Targets{"https://foo.bar:123/bad-emails/get/", 1, 456},
+			expected: &Targets{"https://foo.bar:123/bad-emails/get/", "bad-emails", 1, 456},
 		},
 		{
 			in:       "https://foo.bar:123/bad-emails/get/[123:456]",
-			expected: &Targets{"https://foo.bar:123/bad-emails/get/", 123, 456},
+			expected: &Targets{"https://foo.bar:123/bad-emails/get/", "bad-emails", 123, 456},
 		},
 		{
 			in:       "https://foo.bar:123/bad-emails/get/[456:123]",
-			expected: &Targets{"https://foo.bar:123/bad-emails/get/", 123, 456},
+			expected: &Targets{"https://foo.bar:123/bad-emails/get/", "bad-emails", 123, 456},
 		},
 	}
 
@@ -54,6 +54,10 @@ func TestSuccessExpandTargetURL(t *testing.T) {
 
 func TestFailExpandTargetURL(t *testing.T) {
 	testTable := []string{
+		"",
+		"https://",
+		"https://foo.bar:123/",
+		"https://foo.bar:123/bad-emails/",
 		"https://foo.bar:123/bad-emails/get/",
 		"https://foo.bar:123/bad-emails/get/abc",
 		"https://foo.bar:123/bad-emails/get/[]",
