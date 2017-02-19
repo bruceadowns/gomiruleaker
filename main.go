@@ -12,22 +12,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("%s", in)
-
-	targets, err := lib.ExpandTargetURL(in.Target)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Printf("prefix: %s start: %d end: %d",
-		targets.Prefix, targets.Start, targets.End)
 
 	// construct pipeline
 	// producer/source -> pipeline -> consumer/sink
 	// generator -> parse[] -> accumulator -> poster
 
 	log.Print("Start generating sources for the pipeline")
-	genChan := lib.Generate(targets, in.DownloadDelayMs)
+	genChan := lib.Generate(in.Targets, in.DownloadDelayMs)
 
 	log.Print("Start parser channel to accept sources")
 	parseChan := lib.Parse(genChan, in.ParserCount)

@@ -16,7 +16,6 @@ func DoGet(u string) (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error getting url: %s [%s]", u, err)
 	}
-
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("Error getting url %s [%d]", u, resp.StatusCode)
 	}
@@ -27,7 +26,9 @@ func DoGet(u string) (*bytes.Buffer, error) {
 		return nil, fmt.Errorf("Error reading response body: %s", u)
 	}
 
-	log.Printf("Response: %d len: %d '%s'", resp.StatusCode, len(body), Trunc(string(body)))
+	log.Printf("Response: %d len: %d type: %s '%s'",
+		resp.StatusCode, len(body),
+		resp.Header.Get("Content-Type"), Trunc(string(body)))
 	return bytes.NewBuffer(body), nil
 }
 
@@ -51,6 +52,8 @@ func DoPost(u string, r io.Reader) error {
 		// return err
 	}
 
-	log.Printf("Response: %d '%s'", resp.StatusCode, body)
+	log.Printf("Response: %d len: %d type: %s '%s'",
+		resp.StatusCode, len(body),
+		resp.Header.Get("Content-Type"), Trunc(string(body)))
 	return nil
 }

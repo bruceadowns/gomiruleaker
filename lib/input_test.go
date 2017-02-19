@@ -2,70 +2,76 @@ package lib
 
 import (
 	"bytes"
-	"fmt"
 	"strings"
 	"testing"
 )
 
-func TestInputValid(t *testing.T) {
-	in := &Input{
-		Target:      "foo",
-		ParserCount: 1,
-	}
-	if err := in.IsValid(); err != nil {
-		t.Errorf("Expected valid input")
-	}
-}
-
-func TestInputInvalid(t *testing.T) {
-	in := &Input{
-		DownloadDelayMs: 1,
-		AccumBatchSize:  2,
-		ParserCount:     3,
-		Debug:           false,
-	}
-	if err := in.IsValid(); err == nil {
-		t.Errorf("Expected invalid input")
-	}
-}
-
-func TestInputString(t *testing.T) {
-	in := &Input{
-		Target:          "foo",
-		MiruURL:         "bar",
-		OutputDir:       "bazz",
-		DownloadDelayMs: 1,
-		AccumBatchSize:  2,
-		ParserCount:     3,
-		PostCompress:    true,
-		Debug:           true,
-	}
-	out := fmt.Sprintf("%s", in)
-	if !strings.EqualFold("target: foo miru: bar dir: bazz delay: 1 batch: 2 count: 3 compress: true debug: true", out) {
-		t.Errorf("Unexpected input %s", out)
-	}
-}
-
 func TestInitInputSuccess(t *testing.T) {
-	test := `{
-	  "target": "https://foo.com/get/123",
-	  "miruUrl": "https://host:port/add",
-	  "downloadDelayMs": 500,
-	  "accumBatchSize": 10,
-	  "parserCount": 2,
-		"postErrorDelayMs": 1000,
-		"postCompress": true,
-	  "debug": true
-	}`
+	test := `
+miruUrl: https://host:port/add
+outputDir: ./dump
+downloadDelayMs: 500
+accumBatchSize: 10
+parserCount: 2
+postErrorDelayMs: 1000
+postCompress: true
+debug: true
+
+targets:
+  - type: one
+    subType: subone
+    start: 123
+    end: 124
+
+  - type: two
+    subType: subtwo
+    start: 125
+    end: 126
+    limit: 10
+`
 
 	in, err := InitInput(bytes.NewBufferString(test))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
-	if !strings.EqualFold(in.Target, "https://foo.com/get/123") {
-		t.Error("Target invalid")
+	if len(in.Targets) != 2 {
+		t.Error("Invalid target count")
+		return
 	}
+
+	if !strings.EqualFold(in.Targets[0].Type, "one") {
+		t.Error("Target type invalid")
+	}
+	if !strings.EqualFold(in.Targets[0].SubType, "subone") {
+		t.Error("Target subtype invalid")
+	}
+	if in.Targets[0].Start != 123 {
+		t.Error("Target start invalid")
+	}
+	if in.Targets[0].End != 124 {
+		t.Error("Target end invalid")
+	}
+	if in.Targets[0].Limit != 100 {
+		t.Errorf("Target limit %d invalid", in.Targets[0].Limit)
+	}
+
+	if !strings.EqualFold(in.Targets[1].Type, "two") {
+		t.Error("Target type invalid")
+	}
+	if !strings.EqualFold(in.Targets[1].SubType, "subtwo") {
+		t.Error("Target subtype invalid")
+	}
+	if in.Targets[1].Start != 125 {
+		t.Error("Target start invalid")
+	}
+	if in.Targets[1].End != 126 {
+		t.Error("Target end invalid")
+	}
+	if in.Targets[1].Limit != 10 {
+		t.Error("Target limit invalid")
+	}
+
 	if !strings.EqualFold(in.MiruURL, "https://host:port/add") {
 		t.Error("MiruURL invalid")
 	}
@@ -86,36 +92,5 @@ func TestInitInputSuccess(t *testing.T) {
 	}
 	if !in.Debug {
 		t.Error("Debug invalid")
-	}
-}
-
-func TestInitInputMinimum(t *testing.T) {
-	test := `{"target":"https://foo.com/get/123"}`
-	in, err := InitInput(bytes.NewBufferString(test))
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	if !strings.EqualFold(in.Target, "https://foo.com/get/123") {
-		t.Error("Target invalid")
-	}
-}
-
-func TestInitInputInvalid(t *testing.T) {
-	test := `{foo:bar}`
-
-	_, err := InitInput(bytes.NewBufferString(test))
-	if err == nil {
-		t.Error("Expected decode error")
-	}
-}
-
-func TestInitInputDecodeError(t *testing.T) {
-	test := `{}`
-
-	_, err := InitInput(bytes.NewBufferString(test))
-	if err == nil {
-		t.Error("Expected invalid error")
 	}
 }

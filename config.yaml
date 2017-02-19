@@ -1,0 +1,20 @@
+~miruUrl: https://host:port/add
+outputDir: ./dump
+downloadDelayMs: 200
+accumBatchSize: 10
+parserCount: 1
+postErrorDelayMs: 1000
+postCompress: false
+debug: true
+
+targets:
+  - type: wikiLeaks
+    subType: podesta-emails
+    start: 123
+    end: 124
+
+  - type: foia
+    subType: clinton_email
+    start: 123
+    end: 124
+    limit: 10

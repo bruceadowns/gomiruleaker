@@ -1,41 +1,147 @@
 package lib
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"path"
+	"regexp"
 	"sync"
 	"time"
 )
+
+const (
+	wikiLeaksURLTemplate    = "https://www.wikileaks.org/%s/get/%d"
+	foiaMetaDataURLTemplate = "https://foia.state.gov/searchapp/Search/SubmitSimpleQuery?searchText=*&beginDate=false&endDate=false&collectionMatch=%s&postedBeginDate=false&postedEndDate=false&caseNumber=false&page=1&start=%d&limit=%d"
+	foiaDocumentURLTemplate = "https://foia.state.gov/searchapp/%s"
+)
+
+var (
+	reDate = regexp.MustCompile(`new Date\(([0-9]+)\)`)
+)
+
+func generateWikiLeaks(t *InputTarget, out chan *Email, delay int, wg *sync.WaitGroup) error {
+	log.Printf("Generate wikileak sources")
+	defer wg.Done()
+
+	for idx := t.Start; idx <= t.End; idx++ {
+		u := fmt.Sprintf(wikiLeaksURLTemplate, t.SubType, idx)
+		if bb, err := DoGet(u); err == nil {
+			out <- &Email{
+				Type: t.SubType,
+				ID:   string(idx),
+				Raw:  bb.Bytes(),
+			}
+		} else {
+			log.Printf("Error occurred getting %s", u)
+			// should return error when not 404
+			break
+		}
+
+		if delay > 0 {
+			log.Printf("Sleep %dms between http gets", delay)
+			time.Sleep(time.Duration(delay) * time.Millisecond)
+		}
+	}
+
+	log.Printf("Done generating wikileak sources")
+	return nil
+}
+
+func generateFoia(t *InputTarget, out chan *Email, delay int, wg *sync.WaitGroup) error {
+	log.Printf("Generate foia sources")
+	defer wg.Done()
+
+	start := t.Start
+	end := t.End
+	limit := t.Limit
+
+	if start+limit > end {
+		limit = end - start + 1
+	}
+
+	var urls []string
+	for {
+		u := fmt.Sprintf(foiaMetaDataURLTemplate, t.SubType, start, limit)
+		if bb, err := DoGet(u); err == nil {
+			bbClean := reDate.ReplaceAll(bb.Bytes(), []byte("$1"))
+
+			var results FoiaResults
+			if derr := json.Unmarshal(bbClean, &results); derr != nil {
+				log.Printf("Error decoding foia metadata: %s", derr)
+				break
+			}
+
+			for _, v := range results.Results {
+				urls = append(urls, fmt.Sprintf(foiaDocumentURLTemplate, v.PdfLink))
+			}
+
+			start = start + limit
+			if end > results.TotalHits {
+				end = results.TotalHits
+			}
+			if limit > end-start+1 {
+				limit = end - start + 1
+			}
+
+			if limit < 1 {
+				break
+			}
+		} else {
+			log.Printf("Error getting foia metadata: %s", err)
+			break
+		}
+	}
+
+	for _, v := range urls {
+		if bb, err := DoGet(v); err == nil {
+			out <- &Email{
+				Type: t.SubType,
+				ID:   path.Base(v),
+				Raw:  bb.Bytes(),
+			}
+		} else {
+			log.Printf("Error occurred getting %s", v)
+			break
+		}
+
+		if delay > 0 {
+			log.Printf("Sleep %dms between http gets", delay)
+			time.Sleep(time.Duration(delay) * time.Millisecond)
+		}
+	}
+
+	log.Printf("Done generating foia sources")
+	return nil
+}
 
 // Generate ...
 // * enumerates urls from Targets
 // * retrieves the http.Get
 // * send bytes it along to the parse channel
-func Generate(t *Targets, d int) chan *Email {
-	log.Printf("Generate sources: %s [%d]", t, d)
+func Generate(in []*InputTarget, delay int) chan *Email {
+	log.Printf("Generate sources")
 
 	out := make(chan *Email)
+	var wg sync.WaitGroup
+
+	for _, v := range in {
+		switch v.Type {
+		case "wikiLeaks":
+			wg.Add(1)
+			go generateWikiLeaks(v, out, delay, &wg)
+		case "foia":
+			wg.Add(1)
+			go generateFoia(v, out, delay, &wg)
+		default:
+			log.Printf("Unknown target type")
+		}
+	}
 
 	go func() {
-		defer close(out)
-
-		for idx := t.Start; idx <= t.End; idx++ {
-			if bb, err := DoGet(fmt.Sprintf("%s%d", t.Prefix, idx)); err == nil {
-				out <- &Email{
-					ID:   idx,
-					Type: t.Type,
-					Raw:  bb.Bytes(),
-				}
-			} else {
-				break
-			}
-
-			if d > 0 {
-				log.Printf("Sleep %dms between http gets", d)
-				time.Sleep(time.Duration(d) * time.Millisecond)
-			}
-		}
+		wg.Wait()
+		close(out)
 	}()
 
 	return out
@@ -57,9 +163,9 @@ func Parse(in chan *Email, c int) chan *Email {
 		wg.Add(1)
 
 		go func() {
-			for e := range in {
-				if err := ParseEmail(e); err == nil {
-					out <- e
+			for rawemail := range in {
+				if err := rawemail.Parse(); err == nil {
+					out <- rawemail
 				} else {
 					log.Print(err)
 				}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"net/mail"
 	"os"
 	"strings"
@@ -16,8 +17,8 @@ import (
 
 // Email ...
 type Email struct {
-	ID      int
 	Type    string
+	ID      string
 	To      []string
 	From    string
 	Date    time.Time
@@ -85,11 +86,24 @@ func (e Emails) Post(u string, delayError int, compress bool) error {
 	return nil
 }
 
-// ParseEmail ...
-func ParseEmail(e *Email) error {
-	log.Printf("Parse Email: %s", Trunc(string(e.Raw)))
+// Parse ...
+func (e *Email) Parse() error {
+	log.Printf("Parse Email: %s:%s %s", e.ID, e.Type, Trunc(string(e.Raw)))
 
-	m, err := mail.ReadMessage(bytes.NewBuffer(e.Raw))
+	contentType := http.DetectContentType(e.Raw)
+	log.Printf("Email content type: %s", contentType)
+
+	bb := bytes.NewBuffer(e.Raw)
+	if strings.HasPrefix(contentType, "text/plain") {
+		log.Printf("Parse text/plain")
+	} else if strings.EqualFold(contentType, "application/pdf") {
+		// TODO parse pdf
+		log.Printf("Parse application/pdf")
+	} else {
+		return fmt.Errorf("Unknown content type: %s", contentType)
+	}
+
+	m, err := mail.ReadMessage(bb)
 	if err != nil {
 		return fmt.Errorf("Error parsing email: %s [%s]", Trunc(string(e.Raw)), err)
 	}
@@ -118,7 +132,7 @@ func ParseEmail(e *Email) error {
 
 // Save ...
 func (e Email) Save(d string) error {
-	f := fmt.Sprintf("%s_%d.eml", e.Type, e.ID)
+	f := fmt.Sprintf("%s_%s.eml", e.Type, e.ID)
 	if d == "" {
 		log.Printf("Not saving email: %s", f)
 	} else {

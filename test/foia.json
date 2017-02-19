@@ -1,0 +1,21 @@
+{
+  "success": true,
+  "totalHits": 32410,
+  "Results": [
+    {
+      "subject": "Krishna",
+      "documentClass": "Litigation_F-2016-07895_7",
+      "pdfLink": "DOCUMENTS/Litigation_F-2016-07895_7/Litigation_F-2016-07895/DOC_0C06134406/C06134406.pdf",
+      "originalLink": null,
+      "docDate": 1297573200000,
+      "postedDate": 1485925200000,
+      "from": "Huma Abedin",
+      "to": "H",
+      "messageNumber": "",
+      "caseNumber": "F-2016-07895"
+    }
+  ],
+  "queryText": "*",
+  "fieldMatch": "clinton_email",
+  "response": "SUCCESS"
+}
