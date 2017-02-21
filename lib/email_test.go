@@ -1,8 +1,14 @@
 package lib
 
 import (
+	"bytes"
+	"io/ioutil"
+	"log"
+	"strconv"
 	"testing"
 	"time"
+
+	"rsc.io/pdf"
 )
 
 func TestDateFormatterSuccess(t *testing.T) {
@@ -31,5 +37,39 @@ func TestDateFormatterFailure(t *testing.T) {
 		} else {
 			t.Logf("Failure as expected")
 		}
+	}
+}
+
+func TestPdf(t *testing.T) {
+	b, err := ioutil.ReadFile("basic.pdf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	bb := bytes.NewReader(b)
+
+	r, err := pdf.NewReader(bb, int64(bb.Len()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//log.Print(r.Page(1).V)
+	//log.Print(r.Page(1).V.Kind())
+	//log.Print(r.Page(1).V.Key("Contents"))
+
+	buf := &bytes.Buffer{}
+	reader := r.Page(1).V.Key("Contents").Reader()
+	if count, err := buf.ReadFrom(reader); err == nil {
+		log.Print(count)
+		log.Print(buf.String())
+
+		bufPrint := &bytes.Buffer{}
+		for _, v := range buf.Bytes() {
+			if strconv.IsPrint(rune(v)) {
+				bufPrint.WriteByte(v)
+			}
+		}
+		log.Print(bufPrint)
+	} else {
+		log.Print(err)
 	}
 }

@@ -6,4 +6,4 @@ download, parse, and post emails to miru-leaks
 
 Uses concurrent pipeline pattern
 
-```generator -> parse[] -> accumulator -> poster```
+```generator[wikileaks, foia] -> parse[cpus] -> accumulator -> poster```
