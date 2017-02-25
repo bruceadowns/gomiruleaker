@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -30,7 +31,7 @@ func generateWikiLeaks(t *InputTarget, out chan *Email, delay int, wg *sync.Wait
 		if bb, err := DoGet(u); err == nil {
 			out <- &Email{
 				Type: t.SubType,
-				ID:   string(idx),
+				ID:   strconv.Itoa(idx),
 				Raw:  bb.Bytes(),
 			}
 		} else {
